@@ -1,0 +1,25 @@
+node_modules/
+.env
+.env.local
+
+build/
+dist/
+.android/
+ios/
+
+uploads/
+
+*.log
+.DS_Store
+
+# Hardhat
+backend/chain/artifacts/
+backend/chain/cache/
+backend/chain/typechain-types/
+
+# Capacitor Android
+backend/frontend-user/android/.gradle/
+backend/frontend-user/android/build/
+backend/frontend-user/android/app/build/
+backend/frontend-user/android/capacitor-cordova-android-plugins/build/
+backend/frontend-user/android/capacitor-camera-plugin/

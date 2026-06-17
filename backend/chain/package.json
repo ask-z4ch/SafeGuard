@@ -1,0 +1,21 @@
+{
+    "name":  "chain",
+    "version":  "1.0.0",
+    "description":  "",
+    "main":  "index.js",
+    "scripts":  {
+                    "compile":  "npx hardhat compile",
+                    "node":  "npx hardhat node",
+                    "deploy":  "npx hardhat run scripts/deploy.js --network localhost",
+                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "devDependencies":  {
+                            "@nomicfoundation/hardhat-toolbox":  "^6.1.0",
+                            "hardhat":  "^2.22.3"
+                        }
+}
