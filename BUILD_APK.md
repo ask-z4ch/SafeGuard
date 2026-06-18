@@ -42,7 +42,7 @@ cd android
 .\gradlew.bat assembleDebug
 ```
 
-The APK will be at: `android\app\build\outputs\apk\debug\app-debug.apk`
+The APK will be at: `android\app\build\outputs\apk\debug\safeguard-companion.apk`
 
 ## Alternative: Build via Android Studio
 

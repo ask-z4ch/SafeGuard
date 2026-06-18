@@ -65,8 +65,10 @@ Demo data (users, SOS records, VC) auto-seeded on startup. For blockchain featur
 ```bash
 cd backend/frontend-user
 npm run build
-npx cap copy android
+npx cap copy
+npx cap sync android
 cd android && ./gradlew assembleDebug
+# Output: android\app\build\outputs\apk\debug\safeguard-companion.apk
 ```
 
 ## Login
