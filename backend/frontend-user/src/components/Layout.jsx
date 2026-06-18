@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 
+import ConnectionIndicator from './ConnectionIndicator';
+import OfflineBanner from './OfflineBanner';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
@@ -13,6 +15,7 @@ const Layout = () => {
 
   return (
     <div className="app-shell">
+      <OfflineBanner />
       <header className="app-header">
         <div>
           <h1>safeguard <small>companion</small></h1>
@@ -20,10 +23,12 @@ const Layout = () => {
         <nav className="nav">
           {isAuthenticated ? (
             <>
+              <ConnectionIndicator />
               <span className="nav-user">{user?.name || user?.email}</span>
               <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/upload">Upload ID</NavLink>
               <NavLink to="/history">SOS history</NavLink>
+              <NavLink to="/emergency">Emergency</NavLink>
               <NavLink to="/settings">Settings</NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Logout

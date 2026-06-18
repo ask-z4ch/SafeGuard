@@ -7,9 +7,13 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
   },
+  allowNavigation: ['safeguard-c7n8.onrender.com', 'safeguard-plum.vercel.app'],
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
+    },
+    CapacitorHttp: {
+      enabled: true,
     },
   },
 };

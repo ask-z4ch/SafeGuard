@@ -24,6 +24,11 @@ const LoginPage = () => {
 
     try {
       const response = await client.post('/api/auth/login', form);
+      if (response.data?.user?.role === 'admin') {
+        setError('This app is for travellers. Use the admin portal to sign in as an administrator.');
+        setSubmitting(false);
+        return;
+      }
       login(response.data.token, response.data.user);
       const redirectPath = location.state?.from?.pathname || '/dashboard';
       navigate(redirectPath);

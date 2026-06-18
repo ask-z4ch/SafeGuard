@@ -1,13 +1,27 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://safeguard-plum.vercel.app',
+  'https://safeguardadmin.vercel.app',
+  'capacitor://localhost',
+  'http://localhost',
+];
+
+const ioOrigins = allowedOrigins.length ? allowedOrigins : defaultOrigins;
+
 let ioInstance;
 
 export const initSocket = (server) => {
   ioInstance = new Server(server, {
     cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
+      origin: ioOrigins,
+      methods: ['GET', 'POST'],
+      credentials: true,
     }
   });
 

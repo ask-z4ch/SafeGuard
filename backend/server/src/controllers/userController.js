@@ -4,8 +4,6 @@ import User from '../models/User.js';
 import VCRecord from '../models/VCRecord.js';
 import { saveEncryptedFile } from '../services/fileService.js';
 
-const allowedIdTypes = ['aadhar', 'passport'];
-
 export const getProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('name email verified idDocuments role createdAt');
@@ -99,7 +97,7 @@ export const uploadIdDocument = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, currentPassword, newPassword } = req.validated || req.body;
+    const { name, currentPassword, newPassword } = req.validated;
 
     const user = await User.findById(req.user.id);
     if (!user) {

@@ -11,6 +11,9 @@
 # production
 /build
 
+# Unity WebGL build artifacts (served via API server in production)
+public/training-game/Build/
+
 # misc
 .DS_Store
 .env.local

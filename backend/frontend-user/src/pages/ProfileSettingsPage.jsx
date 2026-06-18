@@ -2,29 +2,27 @@ import { useState } from 'react';
 
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const ProfileSettingsPage = () => {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { addToast } = useToast();
   const [name, setName] = useState(user?.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
 
     if (newPassword && newPassword !== confirmPassword) {
-      setError('New passwords do not match');
+      addToast('New passwords do not match', 'error');
       return;
     }
 
     if (newPassword && newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+      addToast('New password must be at least 8 characters', 'error');
       return;
     }
 
@@ -37,12 +35,12 @@ const ProfileSettingsPage = () => {
       }
       const res = await client.put('/api/user/profile', body);
       updateUser({ ...user, name: res.data.user.name });
-      setMessage('Profile updated');
+      addToast('Profile updated', 'success');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Update failed');
+      addToast(err.response?.data?.message || 'Update failed', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +48,7 @@ const ProfileSettingsPage = () => {
 
   return (
     <section className="card card--padded" style={{ width: 'min(520px, 100%)' }}>
-      <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Profile settings</h2>
+      <h2 className="card-title">Profile settings</h2>
       <p className="muted" style={{ margin: '0.2rem 0 0.6rem', fontSize: '0.75rem' }}>{user?.email}</p>
       <form className="form" onSubmit={handleSubmit}>
         <label>
@@ -71,10 +69,10 @@ const ProfileSettingsPage = () => {
           Confirm new password
           <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter new password" />
         </label>
-        <button type="submit" disabled={submitting}>{submitting ? 'Saving...' : 'Save changes'}</button>
+        <button type="submit" disabled={submitting} className={submitting ? 'btn-loading' : ''}>
+          {submitting ? 'Saving' : 'Save changes'}
+        </button>
       </form>
-      {message && <div className="success">{message}</div>}
-      {error && <div className="error">{error}</div>}
     </section>
   );
 };

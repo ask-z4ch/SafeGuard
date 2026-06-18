@@ -19,7 +19,7 @@ const UserManagementPage = () => {
       const params = { page, limit };
       if (search.trim()) params.search = search.trim();
       const res = await client.get('/api/admin/users', { params });
-      setUsers(res.data.items);
+      setUsers((res.data.items || []).filter((u) => u.role !== 'admin'));
       setTotal(res.data.total);
       setPages(res.data.pages);
     } catch (err) {
@@ -31,6 +31,7 @@ const UserManagementPage = () => {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   const handleSearch = (e) => {

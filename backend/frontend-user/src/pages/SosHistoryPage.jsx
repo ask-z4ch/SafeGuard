@@ -1,40 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+
 import client from '../api/client';
+import SkeletonLoader from '../components/SkeletonLoader';
+import useRefreshOnFocus from '../hooks/useRefreshOnFocus';
 
 const SosHistoryPage = () => {
   const [sosRecords, setSosRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+  const touchStartY = useRef(0);
 
-  useEffect(() => {
-    const fetchSos = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await client.get('/api/sos/history', { params: { page, limit } });
-        setSosRecords(res.data?.items || []);
-        setTotal(res.data?.total || 0);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load SOS history');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSos();
+  const fetchSos = useCallback(async (silent) => {
+    try {
+      if (!silent) setLoading(true);
+      else setRefreshing(true);
+      const res = await client.get('/api/sos/history', { params: { page, limit } });
+      setSosRecords(res.data?.items || []);
+      setTotal(res.data?.total || 0);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load SOS history');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [page]);
 
+  useEffect(() => { fetchSos(); }, [fetchSos]);
+  useRefreshOnFocus(() => fetchSos(true));
+
+  const handleTouchStart = (e) => { touchStartY.current = e.touches[0].clientY; };
+  const handleTouchEnd = (e) => {
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (dy > 100 && !loading && !refreshing) fetchSos(true);
+  };
+
   return (
-    <section className="card card--padded" style={{ width: 'min(720px, 100%)' }}>
-      <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>SOS history</h2>
+    <section className="card card--padded" style={{ width: 'min(720px, 100%)' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="card-header-row">
+        <h2 className="card-title">SOS history</h2>
+        {refreshing && <span className="loading-spinner" />}
+      </div>
       <p className="muted" style={{ margin: '0.2rem 0 0.8rem', fontSize: '0.75rem' }}>{total} total alerts</p>
 
       {error && <div className="error">{error}</div>}
       {loading ? (
-        <p className="muted">Loading...</p>
+        <SkeletonLoader count={5} height="2.4rem" />
       ) : sosRecords.length === 0 ? (
         <p className="muted">No SOS alerts sent yet.</p>
       ) : (
@@ -46,12 +61,12 @@ const SosHistoryPage = () => {
                   <div>
                     <strong>{record.messageText || record.messageType}</strong>
                     {record.location && (
-                      <small style={{ display: 'block', color: 'var(--text-dim)', fontSize: '0.7rem' }}>
+                      <small className="location-coords">
                         {record.location.lat.toFixed(4)}, {record.location.lng.toFixed(4)}
                       </small>
                     )}
                   </div>
-                  <small style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                  <small className="timestamp-mono">
                     {formatDistanceToNow(new Date(record.createdAt), { addSuffix: true })}
                   </small>
                 </li>
@@ -59,8 +74,9 @@ const SosHistoryPage = () => {
             </ul>
           </div>
           {total > limit && (
-            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginTop: '0.8rem' }}>
+            <div className="pagination-row">
               <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="secondary">Prev</button>
+              <span className="muted" style={{ fontSize: '0.75rem' }}>{page} / {Math.ceil(total / limit)}</span>
               <button disabled={page * limit >= total} onClick={() => setPage((p) => p + 1)} className="secondary">Next</button>
             </div>
           )}

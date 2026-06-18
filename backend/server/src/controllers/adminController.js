@@ -23,7 +23,7 @@ const logAdminAction = async ({ adminId, action, targetUser, targetType, details
 export const issueVerifiableCredential = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { tripId = 'DEMO-TRIP-001', visitPeriod = '2024-01-01/2024-12-31' } = req.validated || req.body;
+    const { tripId, visitPeriod } = req.validated;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -159,11 +159,13 @@ export const listUsers = async (req, res, next) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
-    const search = req.query.search || '';
+    const raw = (req.query.search || '').trim();
+    const search = raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 100);
 
+    const nonAdmin = { role: { $ne: 'admin' } };
     const filter = search
-      ? { $or: [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }] }
-      : {};
+      ? { ...nonAdmin, $or: [{ name: { $regex: search, $options: 'i' } }, { email: { $regex: search, $options: 'i' } }] }
+      : nonAdmin;
 
     const [users, total] = await Promise.all([
       User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).select('-password'),

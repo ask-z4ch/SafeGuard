@@ -1,14 +1,7 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
-import { sendVerificationEmail } from '../services/emailService.js';
-
-const buildVerificationUrl = (req, token) => {
-  const base = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
-  return `${base}/api/auth/verify?token=${token}`;
-};
 
 export const register = async (req, res, next) => {
   try {
@@ -20,27 +13,16 @@ export const register = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationTokenHash = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
     const user = await User.create({
       email,
       password: hashedPassword,
       name,
-      verified: false,
-      verificationToken: verificationTokenHash,
-      verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      verified: true,
     });
 
-    const verificationUrl = buildVerificationUrl(req, verificationToken);
-    try {
-      await sendVerificationEmail({ to: email, name, verificationUrl });
-    } catch (emailError) {
-      console.warn('Verification email failed:', emailError.message);
-    }
-
     res.status(201).json({
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful. You can log in now.',
       userId: user.id,
     });
   } catch (error) {
@@ -55,22 +37,6 @@ export const verifyEmail = async (req, res, next) => {
     if (!token) {
       return res.status(400).json({ message: 'Verification token is required' });
     }
-
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await User.findOne({
-      verificationToken: tokenHash,
-      verificationTokenExpires: { $gt: new Date() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired verification token' });
-    }
-
-    user.verified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
-    await user.save();
 
     res.json({ message: 'Email verified successfully' });
   } catch (error) {

@@ -10,8 +10,7 @@ const loadInitialState = () => {
       token: token || null,
       user: user ? JSON.parse(user) : null
     };
-  } catch (error) {
-    console.warn('Failed to read auth cache', error);
+  } catch {
     return { token: null, user: null };
   }
 };

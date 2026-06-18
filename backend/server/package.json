@@ -21,6 +21,7 @@
     "ethers": "^6.13.0",
     "express": "^5.1.0",
     "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "morgan": "^1.11.0",
@@ -36,7 +37,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "dev": "node scripts/prepare-training-module.js && nodemon src/index.js",
+    "start": "node scripts/prepare-training-module.js && node src/index.js",
+    "prepare": "node scripts/prepare-training-module.js"
   }
 }

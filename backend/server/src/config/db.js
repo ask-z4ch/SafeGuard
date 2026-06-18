@@ -8,23 +8,20 @@ const connectDB = async () => {
     return;
   }
 
-  // HACK: fallback to in-memory so the project runs without a real MongoDB — remove for production
-  if (process.env.MONGO_URI) {
-    try {
-      await mongoose.connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000
-      });
-      console.log('MongoDB connected (Atlas/local)');
-      return;
-    } catch (error) {
-      console.warn(`MongoDB remote connection failed: ${error.message}. Falling back to in-memory server.`);
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('MONGO_URI is required in production');
     }
+    mongoServer = await MongoMemoryServer.create();
+    const memoryUri = mongoServer.getUri();
+    await mongoose.connect(memoryUri);
+    console.log('MongoDB connected (in-memory)');
+    return;
   }
 
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-  console.log(`MongoDB connected (in-memory at ${uri})`);
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+  console.log('MongoDB connected');
 };
 
 export default connectDB;

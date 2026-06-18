@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import DashboardPage from './pages/DashboardPage';
+import EmergencyInfoPage from './pages/EmergencyInfoPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
@@ -28,6 +29,7 @@ const App = () => {
         <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>} />
         <Route path="history" element={<ProtectedRoute><SosHistoryPage /></ProtectedRoute>} />
+        <Route path="emergency" element={<EmergencyInfoPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

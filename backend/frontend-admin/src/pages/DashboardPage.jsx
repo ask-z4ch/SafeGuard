@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { io } from 'socket.io-client';
 
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import TrainingModule from '../components/TrainingModule';
+import SosAudioPlayer from '../components/SosAudioPlayer';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://safeguard-c7n8.onrender.com';
 
 const extractIssuer = (credential) => {
   if (!credential) return null;
@@ -16,6 +18,8 @@ const extractIssuer = (credential) => {
 const DashboardPage = () => {
   const { token } = useAuth();
   const { addToast } = useToast();
+  const toastRef = useRef(addToast);
+  toastRef.current = addToast;
   const [sosEvents, setSosEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,7 +27,6 @@ const DashboardPage = () => {
   const [hashChecks, setHashChecks] = useState({});
   const [actionState, setActionState] = useState({ verify: null, issue: null });
   const [expandedRows, setExpandedRows] = useState(new Set());
-  const [trainingOpen, setTrainingOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
@@ -62,7 +65,7 @@ const DashboardPage = () => {
         }
         return [payload, ...prev];
       });
-      addToast(`SOS from ${payload.user?.name || 'unknown'}`, 'error');
+      toastRef.current(`SOS from ${payload.user?.name || 'unknown'}`, 'error');
     });
     return () => socket.disconnect();
   }, [token]);
@@ -70,7 +73,11 @@ const DashboardPage = () => {
   const toggleExpanded = (id) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -91,9 +98,9 @@ const DashboardPage = () => {
     }
   };
 
-  const issueCredential = async (userId) => {
+  const issueCredential = async (eventId, userId) => {
     if (!userId) return;
-    setActionState((prev) => ({ ...prev, issue: userId }));
+    setActionState((prev) => ({ ...prev, issue: eventId }));
     try {
       const res = await client.post(`/api/admin/issue-vc/${userId}`, {});
       addToast('VC issued and anchored on-chain', 'success');
@@ -200,7 +207,13 @@ const DashboardPage = () => {
                                   {user.verified ? 'verified' : 'unverified'}
                                 </span>
                                 {user.idDocumentUrls?.length ? (
-                                  <a className="link" href={user.idDocumentUrls[0]} target="_blank" rel="noreferrer">view ID</a>
+                                  <button type="button" className="text-button" onClick={async () => {
+                                    try {
+                                      const res = await client.get(user.idDocumentUrls[0], { responseType: 'blob' });
+                                      const url = URL.createObjectURL(res.data);
+                                      window.open(url, '_blank');
+                                    } catch {}
+                                  }}>view ID</button>
                                 ) : null}
                               </div>
                             </div>
@@ -209,10 +222,13 @@ const DashboardPage = () => {
                         <td>
                           <div className="table-message">
                             <p>{event.messageText || '-'}</p>
+                            {event.location && (
+                              <a className="coords" href={`https://www.google.com/maps?q=${event.location.lat},${event.location.lng}`} target="_blank" rel="noreferrer">{event.location.lat.toFixed(4)}, {event.location.lng.toFixed(4)}</a>
+                            )}
                           </div>
                         </td>
                         <td>
-                          {event.audioUrl ? <audio controls src={event.audioUrl} preload="none" /> : <span className="muted">none</span>}
+                          {event.audioUrl ? <SosAudioPlayer audioUrl={event.audioUrl} /> : <span className="muted">none</span>}
                         </td>
                         <td>
                           {event.latestCredential ? (
@@ -242,8 +258,8 @@ const DashboardPage = () => {
                             >
                               {actionState.verify === user?.id ? '...' : 'verify'}
                             </button>
-                            <button type="button" className="secondary" disabled={!user?.id || actionState.issue === user.id} onClick={() => issueCredential(user.id)}>
-                              {actionState.issue === user?.id ? '...' : 'issue VC'}
+                            <button type="button" className="secondary" disabled={!user?.id || actionState.issue === event.id} onClick={() => issueCredential(event.id, user.id)}>
+                              {actionState.issue === event.id ? '...' : 'issue VC'}
                             </button>
                             <button type="button" className="secondary" disabled={!hash} onClick={() => checkHash(hash)}>
                               check hash
@@ -256,7 +272,7 @@ const DashboardPage = () => {
                 </tbody>
               </table>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.8rem', fontSize: '0.75rem' }}>
+            <div className="pagination">
               <span className="muted">Page {page} of {pages}</span>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
                 <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="secondary">Prev</button>
@@ -268,17 +284,7 @@ const DashboardPage = () => {
       </div>
 
       <div className="card card--padded" style={{ marginTop: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#e8edf4' }}>Police training module</h2>
-          <button type="button" onClick={() => setTrainingOpen((v) => !v)} className={trainingOpen ? 'secondary' : ''}>
-            {trainingOpen ? 'Close' : 'Launch'}
-          </button>
-        </div>
-        {trainingOpen && (
-          <div style={{ marginTop: '0.8rem', width: '100%', height: '520px', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-            <iframe title="Police Training Module" src="/training-game/index.html" allow="autoplay; fullscreen" style={{ width: '100%', height: '100%', border: 'none' }} />
-          </div>
-        )}
+        <TrainingModule />
       </div>
     </section>
   );

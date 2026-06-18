@@ -12,7 +12,8 @@ let contract;
 
 const getProvider = () => {
   if (!provider) {
-    const rpcUrl = process.env.ANCHOR_RPC_URL || 'http://127.0.0.1:8545';
+    const rpcUrl = process.env.ANCHOR_RPC_URL;
+    if (!rpcUrl) throw new Error('ANCHOR_RPC_URL env var is required for blockchain operations');
     provider = new ethers.JsonRpcProvider(rpcUrl);
   }
   return provider;
@@ -31,8 +32,7 @@ const getContract = () => {
 
   const deployment = JSON.parse(fs.readFileSync(deploymentFile, 'utf-8'));
 
-  const pk = process.env.ANCHOR_PRIVATE_KEY ||
-             (network === 'localhost' ? '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' : null);
+  const pk = process.env.ANCHOR_PRIVATE_KEY;
 
   if (!pk) {
     throw new Error('Set ANCHOR_PRIVATE_KEY for the target network.');
