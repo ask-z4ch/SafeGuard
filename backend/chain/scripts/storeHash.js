@@ -35,9 +35,7 @@ const normalizeHash = (value) => {
     const providerUrl = process.env.ANCHOR_RPC_URL || 'http://127.0.0.1:8545';
     const provider = new ethers.JsonRpcProvider(providerUrl);
 
-    const DEFAULT_HARDHAT_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-    const suppliedKey = process.env.ANCHOR_PRIVATE_KEY || process.env.PRIVATE_KEY;
-    const privateKey = suppliedKey || (network === 'localhost' ? DEFAULT_HARDHAT_KEY : null);
+    const privateKey = process.env.ANCHOR_PRIVATE_KEY || process.env.PRIVATE_KEY;
 
     if (!privateKey) {
       throw new Error('Set ANCHOR_PRIVATE_KEY (or PRIVATE_KEY) to a funded account for the target network.');

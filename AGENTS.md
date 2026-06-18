@@ -58,7 +58,7 @@ The police training module is served from the **API server** (Render), not from 
 - Admin: admin@example.com / SuperSecure123
 
 ## Key integrations
-- MongoDB Atlas (database)
+- MongoDB (in-memory by default, Atlas optional via MONGO_URI)
 - Ethereum Sepolia (IdentityAnchor contract, via ethers.js)
 - Socket.IO (real-time SOS feed)
 - Veramo (W3C VC issuance, did:key)

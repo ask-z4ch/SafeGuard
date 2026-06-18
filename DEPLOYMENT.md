@@ -57,9 +57,7 @@ For persistent storage (optional), set `MONGO_URI`:
 | `ADMIN_NAME` | `Safeguard Admin` |
 | `ANCHOR_RPC_URL` | Sepolia RPC URL (e.g. `https://eth-sepolia.g.alchemy.com/v2/<key>`) |
 | `ANCHOR_PRIVATE_KEY` | Wallet private key with Sepolia ETH for contract writes |
-| `ANCHOR_CONTRACT_ADDRESS` | Deployed IdentityAnchor contract address |
-| `FRONTEND_USER_URL` | `https://safeguard-plum.vercel.app` |
-| `FRONTEND_ADMIN_URL` | `https://safeguardadmin.vercel.app` |
+| `TRAINING_MODULE_BASE_URL` | Base URL hosting Unity WebGL Build files (optional) |
 
 5. Click **Create Web Service**
 
