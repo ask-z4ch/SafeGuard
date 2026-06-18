@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import app from './app.js';
 import connectDB from './config/db.js';
 import { initSocket } from './services/socketService.js';
-import seedAdmin, { seedDemoUser } from './utils/seedAdmin.js';
+import seedAdmin, { seedDemoData } from './utils/seedAdmin.js';
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ const start = async () => {
   try {
     await connectDB();
     await seedAdmin();
-    await seedDemoUser();
+    await seedDemoData();
     server.listen(PORT, () => {
       console.log(`API server ready on port ${PORT}`);
     });

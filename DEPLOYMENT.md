@@ -10,7 +10,8 @@ User App (Vercel)             Admin App (Vercel)
         +----------> API <------------+
                   (Render)
                        |
-                  MongoDB Atlas
+               MongoMemoryServer
+               (or Atlas if MONGO_URI set)
                        |
                   Ethereum Sepolia
                   (IdentityAnchor)
@@ -18,7 +19,11 @@ User App (Vercel)             Admin App (Vercel)
 
 ---
 
-## 1. Database — MongoDB Atlas
+## 1. Database
+
+The server uses an in-memory MongoDB (via `mongodb-memory-server`) by default. Demo data is auto-seeded on startup. No external database setup required.
+
+For persistent storage (optional), set `MONGO_URI`:
 
 1. Go to [mongodb.com/atlas](https://mongodb.com/atlas) — Sign up (free tier = M0)
 2. Create a cluster → "Build a Database" → M0 (Shared) → AWS / your region
@@ -44,7 +49,7 @@ User App (Vercel)             Admin App (Vercel)
 
 | Variable | Value |
 |---|---|
-| `MONGO_URI` | Your MongoDB Atlas connection string |
+| `MONGO_URI` | MongoDB Atlas connection string (optional — uses in-memory DB by default) |
 | `JWT_SECRET` | Random 64-char hex (use `openssl rand -hex 32`) |
 | `VERAMO_SECRET` | Random 64-char hex |
 | `ADMIN_EMAIL` | `admin@safeguard.app` |

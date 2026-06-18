@@ -9,19 +9,20 @@ const connectDB = async () => {
   }
 
   const uri = process.env.MONGO_URI;
-  if (!uri) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('MONGO_URI is required in production');
+  if (uri) {
+    try {
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+      console.log('MongoDB connected');
+      return;
+    } catch (err) {
+      console.warn('MONGO_URI connection failed, falling back to in-memory DB:', err.message);
     }
-    mongoServer = await MongoMemoryServer.create();
-    const memoryUri = mongoServer.getUri();
-    await mongoose.connect(memoryUri);
-    console.log('MongoDB connected (in-memory)');
-    return;
   }
 
-  await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-  console.log('MongoDB connected');
+  mongoServer = await MongoMemoryServer.create();
+  const memoryUri = mongoServer.getUri();
+  await mongoose.connect(memoryUri);
+  console.log('MongoDB connected (in-memory)');
 };
 
 export default connectDB;

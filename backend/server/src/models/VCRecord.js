@@ -12,8 +12,7 @@ const vcRecordSchema = new mongoose.Schema(
       required: true
     },
     transactionHash: {
-      type: String,
-      required: true
+      type: String
     },
     issuerDid: {
       type: String,

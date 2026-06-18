@@ -23,11 +23,11 @@ safeguard-proto/
 **Frontend:** React 19, react-router-dom, axios, socket.io-client, Capacitor
 **Backend:** Express 5, Mongoose, Socket.IO, Zod, multer, bcryptjs, jsonwebtoken
 **Chain:** Solidity 0.8, Hardhat, ethers v6
-**Storage:** MongoDB Atlas, Render disk
+**Storage:** In-memory MongoDB (auto-seeded), Render disk
 
 ## Getting started
 
-Need Node >= 18, npm >= 9, MongoDB.
+Need Node >= 18, npm >= 9.
 
 ```bash
 git clone https://github.com/ask-z4ch/SafeGuard.git
@@ -42,7 +42,6 @@ cd ../chain && npm install
 `backend/server/.env`:
 
 ```env
-MONGO_URI=mongodb://localhost:27017/safeguard
 JWT_SECRET=<random>
 VERAMO_SECRET=<random>
 ADMIN_EMAIL=admin@example.com
@@ -54,13 +53,12 @@ Both frontends need `REACT_APP_API_BASE_URL=http://localhost:4000` in their `.en
 ### Run locally
 
 ```bash
-# Start MongoDB first
-cd backend/server && npm run dev     # API on :4000
+cd backend/server && npm run dev     # API on :4000 (no MongoDB needed)
 cd ../frontend-user && npm start     # user app on :3000
 cd ../frontend-admin && npm start    # admin on :3001
 ```
 
-Optional: `cd backend/chain && npx hardhat node && npx hardhat run scripts/deploy.js --network localhost` for local chain features.
+Demo data (users, SOS records, VC) auto-seeded on startup. For blockchain features: `cd backend/chain && npx hardhat node && npx hardhat run scripts/deploy.js --network localhost`.
 
 ### APK
 
@@ -87,6 +85,7 @@ cd android && ./gradlew assembleDebug
 
 ## Notes
 
+- Uses in-memory MongoDB by default — data resets on server restart. Set `MONGO_URI` for persistent storage.
 - ID documents encrypted with AES-256-GCM at rest
 - JWT auth, Zod validation on all inputs
 - Rate limited (20/15min auth, 100/min general)

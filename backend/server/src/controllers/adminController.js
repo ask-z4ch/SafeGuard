@@ -39,12 +39,17 @@ export const issueVerifiableCredential = async (req, res, next) => {
     const serialized = JSON.stringify(verifiableCredential);
     const hash = crypto.createHash('sha256').update(serialized).digest('hex');
 
-    const anchor = await anchorCredentialHash(hash);
+    let anchor = null;
+    try {
+      anchor = await anchorCredentialHash(hash);
+    } catch (chainError) {
+      console.warn('Blockchain anchoring unavailable, VC stored locally only:', chainError.message);
+    }
 
     const record = await VCRecord.create({
       user: user.id,
       hash,
-      transactionHash: anchor.transactionHash,
+      transactionHash: anchor?.transactionHash,
       issuerDid,
       verifiableCredential,
     });
@@ -54,7 +59,7 @@ export const issueVerifiableCredential = async (req, res, next) => {
       action: 'issue_vc',
       targetUser: userId,
       targetType: 'vc',
-      details: { hash, transactionHash: anchor.transactionHash },
+      details: { hash, transactionHash: anchor?.transactionHash },
       ip: req.ip,
     });
 
