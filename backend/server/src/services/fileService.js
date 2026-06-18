@@ -15,6 +15,7 @@ const ensureDir = (dirPath) => {
   }
 };
 
+// key derivation tied to VERAMO_SECRET — changing it will break decryption of existing files
 const buildEncryptionKey = () => {
   const baseSecret = process.env.VERAMO_SECRET || process.env.JWT_SECRET;
   if (!baseSecret) {

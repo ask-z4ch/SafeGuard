@@ -58,4 +58,23 @@ const seedAdmin = async () => {
   console.log(`Seeded admin user ${email}`);
 };
 
+export const seedDemoUser = async () => {
+  const email = 'demo@test.com';
+  const password = 'DemoPass123';
+  const name = 'Demo Traveller';
+
+  const existing = await User.findOne({ email });
+  if (existing) {
+    if (!existing.verified) {
+      existing.verified = true;
+      await existing.save();
+    }
+    return;
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+  await User.create({ name, email, password: hashed, role: 'user', verified: true });
+  console.log(`Seeded demo user ${email} / ${password}`);
+};
+
 export default seedAdmin;

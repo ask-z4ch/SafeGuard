@@ -104,6 +104,7 @@ export const login = async (req, res, next) => {
       return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
+    // FIXME: hardcoded 1h expiry — make configurable via env for different environments
     const token = jwt.sign(
       {
         sub: user.id,

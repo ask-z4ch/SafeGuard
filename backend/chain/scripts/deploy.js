@@ -23,9 +23,9 @@ async function main() {
   };
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
 
-  console.log(`? IdentityAnchor deployed at ${address} on network ${hre.network.name}`);
+  console.log(`IdentityAnchor deployed at ${address} on network ${hre.network.name}`);
   console.log('ABI:', JSON.stringify(artifact.abi));
-  console.log(`?? Deployment saved to ${filePath}`);
+  console.log(`Deployment saved to ${filePath}`);
 }
 
 main().catch((error) => {

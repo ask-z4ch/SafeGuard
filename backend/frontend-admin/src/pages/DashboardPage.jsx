@@ -4,7 +4,6 @@ import { io } from 'socket.io-client';
 
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import TrainingModule from '../components/TrainingModule';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
 
@@ -28,6 +27,7 @@ const DashboardPage = () => {
   const [hashChecks, setHashChecks] = useState({});
   const [actionState, setActionState] = useState({ verify: null, issue: null, check: null });
   const [expandedRows, setExpandedRows] = useState(new Set());
+  const [trainingOpen, setTrainingOpen] = useState(false);
 
   useEffect(() => {
     const fetchExisting = async () => {
@@ -59,10 +59,7 @@ const DashboardPage = () => {
 
     socket.on('connect', () => setSocketStatus('connected'));
     socket.on('disconnect', () => setSocketStatus('disconnected'));
-    socket.on('connect_error', (err) => {
-      console.error('Socket connection error', err);
-      setSocketStatus('error');
-    });
+    socket.on('connect_error', () => setSocketStatus('error'));
 
     socket.on('sos', (payload) => {
       setSosEvents((prev) => {
@@ -87,11 +84,8 @@ const DashboardPage = () => {
   const toggleExpanded = (id) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -105,19 +99,12 @@ const DashboardPage = () => {
       setSosEvents((prev) =>
         prev.map((event) =>
           event.user?.id === userId
-            ? {
-                ...event,
-                user: {
-                  ...event.user,
-                  verified: true
-                }
-              }
+            ? { ...event, user: { ...event.user, verified: true } }
             : event
         )
       );
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to verify user.';
-      setError(msg);
+      setError(err.response?.data?.message || 'Failed to verify user.');
     } finally {
       setActionState((prev) => ({ ...prev, verify: null }));
     }
@@ -145,17 +132,13 @@ const DashboardPage = () => {
                   createdAt: new Date().toISOString(),
                   verifiableCredential: payload.verifiableCredential
                 },
-                user: {
-                  ...event.user,
-                  verified: true
-                }
+                user: { ...event.user, verified: true }
               }
             : event
         )
       );
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to issue credential.';
-      setError(msg);
+      setError(err.response?.data?.message || 'Failed to issue credential.');
     } finally {
       setActionState((prev) => ({ ...prev, issue: null }));
     }
@@ -183,49 +166,37 @@ const DashboardPage = () => {
     const canonical = hash.startsWith('0x') ? hash.slice(2) : hash;
     const status = hashChecks[canonical];
 
-    if (!status) {
-      return null;
-    }
-
-    if (status.status === 'loading') {
-      return <span className="tag info">Checking...</span>;
-    }
-
-    if (status.status === 'error') {
-      return <span className="tag danger">{status.error}</span>;
-    }
-
-    if (status.data?.onChain?.exists) {
-      return <span className="tag success">On chain</span>;
-    }
-
-    return <span className="tag warning">Not anchored</span>;
+    if (!status) return null;
+    if (status.status === 'loading') return <span className="tag info">checking</span>;
+    if (status.status === 'error') return <span className="tag danger">{status.error}</span>;
+    if (status.data?.onChain?.exists) return <span className="tag success">anchored</span>;
+    return <span className="tag warning">not found</span>;
   };
 
   return (
-    <section className="dashboard">
+    <section className="dashboard" style={{ width: 'min(1280px, 100%)' }}>
       <div className="card card--padded">
         <header className="dashboard-header">
           <div>
-            <h2>SOS Feed</h2>
-            <p className="muted">
-              Live updates from the field. Socket status: <strong>{socketStatus}</strong>
-            </p>
+            <h2>SOS feed</h2>
           </div>
+          <span className="sos-count">
+            {sortedEvents.length} alerts &middot; socket: {socketStatus}
+          </span>
         </header>
 
         {error && <div className="error">{error}</div>}
 
         {loading ? (
-          <p className="muted">Loading SOS events...</p>
+          <p className="muted" style={{ marginTop: '1rem' }}>Loading...</p>
         ) : sortedEvents.length === 0 ? (
-          <p className="muted">No SOS alerts yet.</p>
+          <p className="muted" style={{ marginTop: '1rem' }}>No SOS alerts yet.</p>
         ) : (
           <div className="table-wrapper">
             <table className="sos-table">
               <thead>
                 <tr>
-                  <th>When</th>
+                  <th>Time</th>
                   <th>User</th>
                   <th>Message</th>
                   <th>Audio</th>
@@ -242,53 +213,57 @@ const DashboardPage = () => {
                   return (
                     <tr key={event.id} className={isUnverified ? 'row-unverified' : ''}>
                       <td>
-                        <div className="table-meta">
-                          <span>{formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}</span>
-                          <small className="muted">{event.messageType}</small>
+                        <div className="table-ts">
+                          {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
+                          <span className="msg-type">{event.messageType}</span>
                         </div>
                       </td>
                       <td>
                         {user ? (
                           <div className="table-meta">
                             <strong>{user.name || 'Unknown'}</strong>
-                            <small>{user.email}</small>
-                            <span className={`tag ${user.verified ? 'success' : 'warning'}`}>
-                              {user.verified ? 'Verified' : 'Unverified'}
-                            </span>
-                            {user.idDocumentUrls?.length ? (
-                              <a className="link" href={user.idDocumentUrls[0]} target="_blank" rel="noreferrer">
-                                View ID
-                              </a>
-                            ) : (
-                              <small className="muted">No ID uploaded</small>
-                            )}
+                            <span className="email">{user.email}</span>
+                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                              <span className={`tag ${user.verified ? 'success' : 'warning'}`}>
+                                {user.verified ? 'verified' : 'unverified'}
+                              </span>
+                              {user.idDocumentUrls?.length ? (
+                                <a className="link" href={user.idDocumentUrls[0]} target="_blank" rel="noreferrer">view ID</a>
+                              ) : null}
+                            </div>
                           </div>
                         ) : (
-                          <span className="muted">(no user data)</span>
+                          <span className="muted">no data</span>
                         )}
                       </td>
                       <td>
                         <div className="table-message">
-                          <p>{event.messageText}</p>
+                          <p>{event.messageText || '-'}</p>
                         </div>
                       </td>
                       <td>
-                        {event.audioUrl ? <audio controls src={event.audioUrl} /> : <span className="muted">No audio</span>}
+                        {event.audioUrl ? <audio controls src={event.audioUrl} preload="none" /> : <span className="muted">none</span>}
                       </td>
                       <td>
                         {event.latestCredential ? (
                           <div className="table-meta">
-                            <span>Hash: {event.latestCredential.hash?.slice(0, 12)}...</span>
-                            {event.latestCredential.transactionHash && (
-                              <small>Tx: {event.latestCredential.transactionHash.slice(0, 12)}...</small>
-                            )}
-                            <button type="button" className="text-button" onClick={() => toggleExpanded(event.id)}>
-                              {expandedRows.has(event.id) ? 'Hide VC' : 'View VC JSON'}
-                            </button>
-                            {renderHashStatus(hash)}
+                            <div className="hash-display">
+                              <strong>hash</strong> {event.latestCredential.hash?.slice(0, 16)}...
+                            </div>
+                            {event.latestCredential.transactionHash ? (
+                              <div className="hash-display">
+                                <strong>tx</strong> {event.latestCredential.transactionHash.slice(0, 16)}...
+                              </div>
+                            ) : null}
+                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                              {renderHashStatus(hash)}
+                              <button type="button" className="text-button" onClick={() => toggleExpanded(event.id)}>
+                                {expandedRows.has(event.id) ? 'hide JSON' : 'view VC'}
+                              </button>
+                            </div>
                           </div>
                         ) : (
-                          <span className="muted">None issued</span>
+                          <span className="muted">not issued</span>
                         )}
                         {expandedRows.has(event.id) && event.latestCredential?.verifiableCredential && (
                           <pre className="vc-preview">
@@ -300,18 +275,18 @@ const DashboardPage = () => {
                         <div className="action-group">
                           <button
                             type="button"
-                            className="secondary"
                             disabled={!user?.id || actionState.verify === user.id || user?.verified}
                             onClick={() => markVerified(user.id)}
                           >
-                            {actionState.verify === user?.id ? 'Marking...' : 'Mark verified'}
+                            {actionState.verify === user?.id ? '...' : 'verify'}
                           </button>
                           <button
                             type="button"
+                            className="secondary"
                             disabled={!user?.id || actionState.issue === user.id}
                             onClick={() => issueCredential(user.id)}
                           >
-                            {actionState.issue === user?.id ? 'Issuing...' : 'Issue VC'}
+                            {actionState.issue === user?.id ? '...' : 'issue VC'}
                           </button>
                           <button
                             type="button"
@@ -320,8 +295,8 @@ const DashboardPage = () => {
                             onClick={() => checkHash(hash)}
                           >
                             {actionState.check === (hash?.startsWith('0x') ? hash.slice(2) : hash)
-                              ? 'Checking...'
-                              : 'Check hash'}
+                              ? '...'
+                              : 'check hash'}
                           </button>
                         </div>
                       </td>
@@ -334,12 +309,26 @@ const DashboardPage = () => {
         )}
       </div>
 
-      <div className="card card--padded">
-        <TrainingModule />
+      <div className="card card--padded" style={{ marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#e8edf4' }}>Police training module</h2>
+          <button type="button" onClick={() => setTrainingOpen((v) => !v)} className={trainingOpen ? 'secondary' : ''}>
+            {trainingOpen ? 'Close' : 'Launch'}
+          </button>
+        </div>
+        {trainingOpen && (
+          <div style={{ marginTop: '0.8rem', width: '100%', height: '520px', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+            <iframe
+              title="Police Training Module"
+              src="/training-game/index.html"
+              allow="autoplay; fullscreen"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
+        )}
       </div>
     </section>
   );
 };
 
 export default DashboardPage;
-

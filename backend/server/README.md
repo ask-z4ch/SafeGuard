@@ -17,12 +17,12 @@ Node.js/Express backend for the Safeguard prototype. Features include user authe
 
 2. Duplicate `.env.example` to `.env` and fill in the values:
 
-   - `MONGO_URI` – Mongo connection string
-   - `JWT_SECRET` – secret for signing access tokens
-   - `EMAIL_USER` / `EMAIL_PASS` – SMTP credentials (defaults assume Gmail; adjust `config/email.js` if needed)
-   - `VERAMO_SECRET` – used by the Veramo agent and file encryption key derivation
-   - `CHAIN_SCRIPT_PATH` – path to the anchoring script (defaults to `../chain/scripts/storeHash.js`)
-   - `PORT` – optional, defaults to `4000`
+   - `MONGO_URI` â€” Mongo connection string
+   - `JWT_SECRET` â€” secret for signing access tokens
+   - `EMAIL_USER` / `EMAIL_PASS` â€” SMTP credentials (defaults assume Gmail; adjust `config/email.js` if needed)
+   - `VERAMO_SECRET` â€” used by the Veramo agent and file encryption key derivation
+   - `CHAIN_SCRIPT_PATH` â€” path to the anchoring script (defaults to `../chain/scripts/storeHash.js`)
+   - `PORT` â€” optional, defaults to `4000`
 
 3. Start the dev server:
 
@@ -39,9 +39,9 @@ Node.js/Express backend for the Safeguard prototype. Features include user authe
 ## Key Features
 
 - **Auth & Email Verification**
-  - `POST /api/auth/register` – accepts `{ email, password, name }`, stores user with `verified:false`, and emails a verification link.
-  - `GET /api/auth/verify?token=...` – validates the emailed token and sets `verified:true`.
-  - `POST /api/auth/login` – issues a JWT (`role:user|admin`, `sub:userId`).
+  - `POST /api/auth/register` â€” accepts `{ email, password, name }`, stores user with `verified:false`, and emails a verification link.
+  - `GET /api/auth/verify?token=...` â€” validates the emailed token and sets `verified:true`.
+  - `POST /api/auth/login` â€” issues a JWT (`role:user|admin`, `sub:userId`).
 
 - **ID Upload (Protected)**
   - `POST /api/user/upload-id`

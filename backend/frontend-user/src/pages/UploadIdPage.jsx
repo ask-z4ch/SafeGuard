@@ -38,9 +38,7 @@ const UploadIdPage = () => {
 
   const handleFileChange = (event) => {
     const selected = event.target.files?.[0];
-    if (selected) {
-      setFile(selected);
-    }
+    if (selected) setFile(selected);
   };
 
   const handleCapture = async () => {
@@ -57,7 +55,7 @@ const UploadIdPage = () => {
       }
     } catch (err) {
       if (err.message !== 'User cancelled photos app') {
-        setError('Camera capture failed. Please use file upload instead.');
+        setError('Camera capture failed. Use file upload instead.');
       }
     }
   };
@@ -65,7 +63,7 @@ const UploadIdPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!file) {
-      setError('Please select an ID document to upload.');
+      setError('Select an ID document to upload.');
       return;
     }
 
@@ -85,7 +83,7 @@ const UploadIdPage = () => {
       setFile(null);
       setPreviewUrl(null);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Upload failed. Please retry.';
+      const msg = err.response?.data?.message || 'Upload failed.';
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -94,34 +92,34 @@ const UploadIdPage = () => {
 
   return (
     <section className="card card--padded">
-      <h2>Upload your government ID</h2>
+      <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Upload government ID</h2>
+      <p className="muted" style={{ margin: '0.2rem 0 0', fontSize: '0.75rem' }}>
+        Accepted: Aadhar or Passport. Files are encrypted before storage.
+      </p>
       <form className="form" onSubmit={handleSubmit}>
         <label>
           ID Type
           <select value={idType} onChange={(event) => setIdType(event.target.value)}>
             {idOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </label>
         <label className="file-picker">
-          Upload document
+          Document
           <input type="file" accept="image/*,.pdf" onChange={handleFileChange} ref={fileInputRef} />
         </label>
-        <button type="button" className="secondary" onClick={handleCapture} style={{ marginTop: '0.5rem' }}>
+        <button type="button" className="secondary" onClick={handleCapture}>
           Capture with camera
         </button>
         {previewUrl && (
           <div className="preview">
-            <p>Preview</p>
             <img src={previewUrl} alt="ID preview" />
           </div>
         )}
-        {file && !previewUrl && <p className="muted">Selected file: {file.name}</p>}
+        {file && !previewUrl && <p className="muted">{file.name}</p>}
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Uploading�' : 'Upload'}
+          {isSubmitting ? 'Uploading...' : 'Upload'}
         </button>
       </form>
       {message && <div className="success">{message}</div>}

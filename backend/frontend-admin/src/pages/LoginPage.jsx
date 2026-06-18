@@ -26,7 +26,7 @@ const LoginPage = () => {
     try {
       const response = await client.post('/api/auth/login', form);
       if (response.data?.user?.role !== 'admin') {
-        setError('This portal is only for admin users.');
+        setError('Access denied. Admin credentials required.');
         setSubmitting(false);
         return;
       }
@@ -34,7 +34,7 @@ const LoginPage = () => {
       const redirectPath = location.state?.from?.pathname || '/dashboard';
       navigate(redirectPath, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Unable to sign in. Check credentials and try again.';
+      const msg = err.response?.data?.message || 'Authentication failed.';
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -43,19 +43,19 @@ const LoginPage = () => {
 
   return (
     <section className="card card--padded auth-card">
-      <h2>Admin Login</h2>
-      <p className="muted">Sign in with your admin credentials to monitor SOS alerts.</p>
+      <h2 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 600, color: '#e8edf4' }}>Admin sign-in</h2>
+      <p className="muted" style={{ margin: '0 0 1rem', fontSize: '0.75rem' }}>Authorized personnel only.</p>
       <form className="form" onSubmit={handleSubmit}>
         <label>
           Email
-          <input type="email" name="email" value={form.email} onChange={handleChange} required placeholder="admin@example.com" />
+          <input type="email" name="email" value={form.email} onChange={handleChange} required placeholder="admin@example.com" autoFocus />
         </label>
         <label>
           Password
-          <input type="password" name="password" value={form.password} onChange={handleChange} required placeholder="Password" />
+          <input type="password" name="password" value={form.password} onChange={handleChange} required placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" />
         </label>
         <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in…' : 'Login'}
+          {isSubmitting ? 'Authenticating...' : 'Sign in'}
         </button>
       </form>
       {error && <div className="error">{error}</div>}

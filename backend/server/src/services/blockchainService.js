@@ -54,3 +54,5 @@ export const checkCredentialHash = async (hash) => {
   const scriptPath = resolveScriptPath('CHAIN_CHECK_SCRIPT_PATH', '../../../chain/scripts/checkHash.js');
   return runScript(scriptPath, [hash]);
 };
+
+// TODO: replace child_process with direct ethers import once server and chain deps are unified

@@ -15,14 +15,12 @@ const Layout = () => {
     <div className="app-shell">
       <header className="app-header">
         <div>
-          <h1>Safeguard Companion</h1>
-          {user ? <p className="subtitle">Welcome back, {user.name || user.email}</p> : <p className="subtitle">Travel safe with digital ID</p>}
+          <h1>safeguard <small>companion</small></h1>
         </div>
         <nav className="nav">
-          <NavLink to="/register">Register</NavLink>
-          <NavLink to="/verify">Verify</NavLink>
           {isAuthenticated ? (
             <>
+              <span className="nav-user">{user?.name || user?.email}</span>
               <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/upload">Upload ID</NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
@@ -30,14 +28,17 @@ const Layout = () => {
               </button>
             </>
           ) : (
-            <NavLink to="/login">Login</NavLink>
+            <>
+              <NavLink to="/login">Login</NavLink>
+              <NavLink to="/register">Register</NavLink>
+            </>
           )}
         </nav>
       </header>
       <main className="app-main">
         <Outlet />
       </main>
-      <footer className="app-footer">© {new Date().getFullYear()} Safeguard Prototype</footer>
+      <footer className="app-footer">safeguard v1.0.0 &mdash; {new Date().getFullYear()}</footer>
     </div>
   );
 };

@@ -13,29 +13,31 @@ const Layout = () => {
 
   return (
     <div className="app-shell">
+      <div className="sys-bar">
+        <span className="class-mark">Restricted &#8212; Authorized Personnel Only</span>
+        <span><span className="dot green"></span>SYS ONLINE</span>
+        <span><span className="dot amber"></span>MONITORING</span>
+      </div>
       <header className="app-header">
         <div>
-          <h1>Safeguard Admin</h1>
-          <p className="subtitle">Live SOS command console</p>
+          <h1>safeguard <small>admin console</small></h1>
         </div>
         <nav className="nav">
           {isAuthenticated ? (
             <>
-              <span className="nav-user">{user?.email || 'Admin'}</span>
+              <span className="nav-user">{user?.email}</span>
               <NavLink to="/dashboard">Dashboard</NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Logout
               </button>
             </>
-          ) : (
-            <NavLink to="/login">Login</NavLink>
-          )}
+          ) : null}
         </nav>
       </header>
       <main className="app-main">
         <Outlet />
       </main>
-      <footer className="app-footer">© {new Date().getFullYear()} Safeguard Prototype</footer>
+      <footer className="app-footer">safeguard v1.0.0 &mdash; {new Date().getFullYear()}</footer>
     </div>
   );
 };

@@ -23,17 +23,17 @@ REACT_APP_API_BASE_URL=http://localhost:4000
 
 ## Features
 
-- **Real-time SOS feed** – connects to Socket.IO on load and appends alerts as they come in.
-- **Traveller context** – shows name, email, verification flag, ID document link, and voice note playback.
-- **Credential controls** – trigger VC issuance, inspect latest VC JSON, and check the anchored hash via `/api/admin/check-hash/:hash`.
-- **Verification actions** – mark travellers verified through `/api/admin/verify-user`.
-- **Hash insights** – inline status tags once a hash check succeeds.
+- **Real-time SOS feed** â€” connects to Socket.IO on load and appends alerts as they come in.
+- **Traveller context** â€” shows name, email, verification flag, ID document link, and voice note playback.
+- **Credential controls** â€” trigger VC issuance, inspect latest VC JSON, and check the anchored hash via `/api/admin/check-hash/:hash`.
+- **Verification actions** â€” mark travellers verified through `/api/admin/verify-user`.
+- **Hash insights** â€” inline status tags once a hash check succeeds.
 
 ## Available scripts
 
-- `npm start` – start CRA dev server on port 3000.
-- `npm run build` – production bundle in `build/`.
-- `npm test` – CRA test runner.
+- `npm start` â€” start CRA dev server on port 3000.
+- `npm run build` â€” production bundle in `build/`.
+- `npm test` â€” CRA test runner.
 
 Ensure the backend exposes the admin endpoints:
 
