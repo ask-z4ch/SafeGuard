@@ -7,6 +7,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ethers": "^6.13.0",
     "@veramo/core": "^6.0.0",
     "@veramo/credential-w3c": "^6.0.0",
     "@veramo/did-manager": "^6.0.0",
