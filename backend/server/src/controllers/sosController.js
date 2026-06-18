@@ -98,3 +98,28 @@ export const createSos = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getUserSosHistory = async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [records, total] = await Promise.all([
+      SOSRecord.find({ user: req.user.id }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      SOSRecord.countDocuments({ user: req.user.id }),
+    ]);
+
+    const items = records.map((r) => ({
+      id: r._id?.toString?.(),
+      messageType: r.messageType,
+      messageText: r.messageText,
+      location: r.location || null,
+      createdAt: r.createdAt,
+    }));
+
+    res.json({ items, total, page, limit, pages: Math.ceil(total / limit) });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -26,7 +26,10 @@ const Layout = () => {
           {isAuthenticated ? (
             <>
               <span className="nav-user">{user?.email}</span>
-              <NavLink to="/dashboard">Dashboard</NavLink>
+              <NavLink to="/dashboard">SOS</NavLink>
+              <NavLink to="/users">Users</NavLink>
+              <NavLink to="/verify">Verify</NavLink>
+              <NavLink to="/audit">Audit</NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Logout
               </button>

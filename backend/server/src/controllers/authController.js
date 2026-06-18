@@ -12,11 +12,7 @@ const buildVerificationUrl = (req, token) => {
 
 export const register = async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
-
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: 'Name, email, and password are required' });
-    }
+    const { email, password, name } = req.validated;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -33,19 +29,19 @@ export const register = async (req, res, next) => {
       name,
       verified: false,
       verificationToken: verificationTokenHash,
-      verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000)
+      verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     const verificationUrl = buildVerificationUrl(req, verificationToken);
     try {
       await sendVerificationEmail({ to: email, name, verificationUrl });
     } catch (emailError) {
-      console.warn('Verification email failed to send:', emailError.message);
+      console.warn('Verification email failed:', emailError.message);
     }
 
     res.status(201).json({
       message: 'Registration successful. Please check your email to verify your account.',
-      userId: user.id
+      userId: user.id,
     });
   } catch (error) {
     next(error);
@@ -64,7 +60,7 @@ export const verifyEmail = async (req, res, next) => {
 
     const user = await User.findOne({
       verificationToken: tokenHash,
-      verificationTokenExpires: { $gt: new Date() }
+      verificationTokenExpires: { $gt: new Date() },
     });
 
     if (!user) {
@@ -84,11 +80,7 @@ export const verifyEmail = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+    const { email, password } = req.validated;
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -104,15 +96,10 @@ export const login = async (req, res, next) => {
       return res.status(403).json({ message: 'Please verify your email before logging in' });
     }
 
-    // FIXME: hardcoded 1h expiry — make configurable via env for different environments
     const token = jwt.sign(
-      {
-        sub: user.id,
-        role: user.role,
-        email: user.email
-      },
+      { sub: user.id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '24h' }
     );
 
     res.json({
@@ -122,8 +109,8 @@ export const login = async (req, res, next) => {
         email: user.email,
         name: user.name,
         role: user.role,
-        verified: user.verified
-      }
+        verified: user.verified,
+      },
     });
   } catch (error) {
     next(error);

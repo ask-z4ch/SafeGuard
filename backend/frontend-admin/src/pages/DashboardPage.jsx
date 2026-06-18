@@ -1,91 +1,76 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { io } from 'socket.io-client';
 
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:4000';
 
 const extractIssuer = (credential) => {
   if (!credential) return null;
-  return (
-    credential.issuer ||
-    credential.iss ||
-    credential.payload?.issuer ||
-    credential.payload?.iss ||
-    null
-  );
+  return credential.issuer || credential.iss || credential.payload?.issuer || credential.payload?.iss || null;
 };
 
 const DashboardPage = () => {
   const { token } = useAuth();
+  const { addToast } = useToast();
   const [sosEvents, setSosEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [socketStatus, setSocketStatus] = useState('disconnected');
   const [hashChecks, setHashChecks] = useState({});
-  const [actionState, setActionState] = useState({ verify: null, issue: null, check: null });
+  const [actionState, setActionState] = useState({ verify: null, issue: null });
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [trainingOpen, setTrainingOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+
+  const fetchSos = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await client.get('/api/admin/sos', { params: { page, limit: 20 } });
+      setSosEvents(res.data?.items || []);
+      setTotal(res.data?.total || 0);
+      setPages(res.data?.pages || 1);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load SOS records.');
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
 
   useEffect(() => {
-    const fetchExisting = async () => {
-      try {
-        setLoading(true);
-        const response = await client.get('/api/admin/sos');
-        setSosEvents(response.data?.items || []);
-      } catch (err) {
-        const msg = err.response?.data?.message || 'Failed to load SOS records.';
-        setError(msg);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (token) {
-      fetchExisting();
-    }
-  }, [token]);
+    if (token) fetchSos();
+  }, [token, fetchSos]);
 
   useEffect(() => {
-    if (!token) {
-      return undefined;
-    }
-
-    const socket = io(API_BASE_URL, {
-      auth: { token: `Bearer ${token}` }
-    });
-
+    if (!token) return;
+    const socket = io(API_BASE_URL, { auth: { token: `Bearer ${token}` } });
     socket.on('connect', () => setSocketStatus('connected'));
     socket.on('disconnect', () => setSocketStatus('disconnected'));
     socket.on('connect_error', () => setSocketStatus('error'));
-
     socket.on('sos', (payload) => {
       setSosEvents((prev) => {
-        const existingIndex = prev.findIndex((item) => item.id === payload.id);
-        if (existingIndex >= 0) {
+        const idx = prev.findIndex((item) => item.id === payload.id);
+        if (idx >= 0) {
           const updated = [...prev];
-          updated[existingIndex] = { ...updated[existingIndex], ...payload };
+          updated[idx] = { ...updated[idx], ...payload };
           return updated;
         }
         return [payload, ...prev];
       });
+      addToast(`SOS from ${payload.user?.name || 'unknown'}`, 'error');
     });
-
     return () => socket.disconnect();
   }, [token]);
-
-  const sortedEvents = useMemo(
-    () => [...sosEvents].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [sosEvents]
-  );
 
   const toggleExpanded = (id) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
@@ -95,16 +80,12 @@ const DashboardPage = () => {
     setActionState((prev) => ({ ...prev, verify: userId }));
     try {
       await client.post('/api/admin/verify-user', { userId });
-      setError(null);
+      addToast('User verified', 'success');
       setSosEvents((prev) =>
-        prev.map((event) =>
-          event.user?.id === userId
-            ? { ...event, user: { ...event.user, verified: true } }
-            : event
-        )
+        prev.map((e) => (e.user?.id === userId ? { ...e, user: { ...e.user, verified: true } } : e))
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to verify user.');
+      addToast(err.response?.data?.message || 'Failed to verify', 'error');
     } finally {
       setActionState((prev) => ({ ...prev, verify: null }));
     }
@@ -114,31 +95,28 @@ const DashboardPage = () => {
     if (!userId) return;
     setActionState((prev) => ({ ...prev, issue: userId }));
     try {
-      const response = await client.post(`/api/admin/issue-vc/${userId}`, {});
-      const payload = response.data;
-      const issuer = extractIssuer(payload.verifiableCredential);
-      setError(null);
-
+      const res = await client.post(`/api/admin/issue-vc/${userId}`, {});
+      addToast('VC issued and anchored on-chain', 'success');
       setSosEvents((prev) =>
-        prev.map((event) =>
-          event.user?.id === userId
+        prev.map((e) =>
+          e.user?.id === userId
             ? {
-                ...event,
+                ...e,
                 latestCredential: {
-                  id: payload.vcRecordId,
-                  hash: payload.hash,
-                  transactionHash: payload.anchor?.transactionHash,
-                  issuerDid: issuer,
+                  id: res.data.vcRecordId,
+                  hash: res.data.hash,
+                  transactionHash: res.data.anchor?.transactionHash,
+                  issuerDid: extractIssuer(res.data.verifiableCredential),
                   createdAt: new Date().toISOString(),
-                  verifiableCredential: payload.verifiableCredential
+                  verifiableCredential: res.data.verifiableCredential,
                 },
-                user: { ...event.user, verified: true }
+                user: { ...e.user, verified: true },
               }
-            : event
+            : e
         )
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to issue credential.');
+      addToast(err.response?.data?.message || 'Failed to issue VC', 'error');
     } finally {
       setActionState((prev) => ({ ...prev, issue: null }));
     }
@@ -147,17 +125,14 @@ const DashboardPage = () => {
   const checkHash = async (hash) => {
     if (!hash) return;
     const canonical = hash.startsWith('0x') ? hash.slice(2) : hash;
-    setActionState((prev) => ({ ...prev, check: canonical }));
     setHashChecks((prev) => ({ ...prev, [canonical]: { status: 'loading' } }));
     try {
-      const response = await client.get(`/api/admin/check-hash/${canonical}`);
-      setHashChecks((prev) => ({ ...prev, [canonical]: { status: 'success', data: response.data } }));
+      const res = await client.get(`/api/admin/check-hash/${canonical}`);
+      setHashChecks((prev) => ({ ...prev, [canonical]: { status: 'success', data: res.data } }));
+      addToast(res.data.onChain?.exists ? 'Hash found on-chain' : 'Hash not on-chain', res.data.onChain?.exists ? 'success' : 'error');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Unable to check hash on chain.';
-      setHashChecks((prev) => ({ ...prev, [canonical]: { status: 'error', error: msg } }));
-      setError(msg);
-    } finally {
-      setActionState((prev) => ({ ...prev, check: null }));
+      setHashChecks((prev) => ({ ...prev, [canonical]: { status: 'error', error: err.response?.data?.message || 'Check failed' } }));
+      addToast('Hash check failed', 'error');
     }
   };
 
@@ -165,147 +140,130 @@ const DashboardPage = () => {
     if (!hash) return null;
     const canonical = hash.startsWith('0x') ? hash.slice(2) : hash;
     const status = hashChecks[canonical];
-
     if (!status) return null;
     if (status.status === 'loading') return <span className="tag info">checking</span>;
     if (status.status === 'error') return <span className="tag danger">{status.error}</span>;
-    if (status.data?.onChain?.exists) return <span className="tag success">anchored</span>;
-    return <span className="tag warning">not found</span>;
+    return status.data?.onChain?.exists ? <span className="tag success">anchored</span> : <span className="tag warning">not found</span>;
   };
 
   return (
     <section className="dashboard" style={{ width: 'min(1280px, 100%)' }}>
+      {error && <div className="error">{error}</div>}
+
       <div className="card card--padded">
         <header className="dashboard-header">
           <div>
             <h2>SOS feed</h2>
           </div>
           <span className="sos-count">
-            {sortedEvents.length} alerts &middot; socket: {socketStatus}
+            {total} alerts &middot; socket: {socketStatus}
           </span>
         </header>
 
-        {error && <div className="error">{error}</div>}
-
         {loading ? (
           <p className="muted" style={{ marginTop: '1rem' }}>Loading...</p>
-        ) : sortedEvents.length === 0 ? (
-          <p className="muted" style={{ marginTop: '1rem' }}>No SOS alerts yet.</p>
+        ) : sosEvents.length === 0 ? (
+          <p className="muted" style={{ marginTop: '1rem' }}>No SOS alerts yet. They will appear here in real time.</p>
         ) : (
-          <div className="table-wrapper">
-            <table className="sos-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>User</th>
-                  <th>Message</th>
-                  <th>Audio</th>
-                  <th>Credential</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedEvents.map((event) => {
-                  const user = event.user;
-                  const isUnverified = !user?.verified;
-                  const hash = event.latestCredential?.hash;
-
-                  return (
-                    <tr key={event.id} className={isUnverified ? 'row-unverified' : ''}>
-                      <td>
-                        <div className="table-ts">
-                          {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
-                          <span className="msg-type">{event.messageType}</span>
-                        </div>
-                      </td>
-                      <td>
-                        {user ? (
-                          <div className="table-meta">
-                            <strong>{user.name || 'Unknown'}</strong>
-                            <span className="email">{user.email}</span>
-                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
-                              <span className={`tag ${user.verified ? 'success' : 'warning'}`}>
-                                {user.verified ? 'verified' : 'unverified'}
-                              </span>
-                              {user.idDocumentUrls?.length ? (
-                                <a className="link" href={user.idDocumentUrls[0]} target="_blank" rel="noreferrer">view ID</a>
-                              ) : null}
-                            </div>
+          <>
+            <div className="table-wrapper">
+              <table className="sos-table">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Message</th>
+                    <th>Audio</th>
+                    <th>Credential</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sosEvents.map((event) => {
+                    const user = event.user;
+                    const hash = event.latestCredential?.hash;
+                    return (
+                      <tr key={event.id} className={!user?.verified ? 'row-unverified' : ''}>
+                        <td>
+                          <div className="table-ts">
+                            {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
+                            <span className="msg-type">{event.messageType}</span>
                           </div>
-                        ) : (
-                          <span className="muted">no data</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="table-message">
-                          <p>{event.messageText || '-'}</p>
-                        </div>
-                      </td>
-                      <td>
-                        {event.audioUrl ? <audio controls src={event.audioUrl} preload="none" /> : <span className="muted">none</span>}
-                      </td>
-                      <td>
-                        {event.latestCredential ? (
-                          <div className="table-meta">
-                            <div className="hash-display">
-                              <strong>hash</strong> {event.latestCredential.hash?.slice(0, 16)}...
-                            </div>
-                            {event.latestCredential.transactionHash ? (
-                              <div className="hash-display">
-                                <strong>tx</strong> {event.latestCredential.transactionHash.slice(0, 16)}...
+                        </td>
+                        <td>
+                          {user ? (
+                            <div className="table-meta">
+                              <strong>{user.name || 'Unknown'}</strong>
+                              <span className="email">{user.email}</span>
+                              <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                                <span className={`tag ${user.verified ? 'success' : 'warning'}`}>
+                                  {user.verified ? 'verified' : 'unverified'}
+                                </span>
+                                {user.idDocumentUrls?.length ? (
+                                  <a className="link" href={user.idDocumentUrls[0]} target="_blank" rel="noreferrer">view ID</a>
+                                ) : null}
                               </div>
-                            ) : null}
-                            <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
-                              {renderHashStatus(hash)}
-                              <button type="button" className="text-button" onClick={() => toggleExpanded(event.id)}>
-                                {expandedRows.has(event.id) ? 'hide JSON' : 'view VC'}
-                              </button>
                             </div>
+                          ) : <span className="muted">no data</span>}
+                        </td>
+                        <td>
+                          <div className="table-message">
+                            <p>{event.messageText || '-'}</p>
                           </div>
-                        ) : (
-                          <span className="muted">not issued</span>
-                        )}
-                        {expandedRows.has(event.id) && event.latestCredential?.verifiableCredential && (
-                          <pre className="vc-preview">
-                            {JSON.stringify(event.latestCredential.verifiableCredential, null, 2)}
-                          </pre>
-                        )}
-                      </td>
-                      <td>
-                        <div className="action-group">
-                          <button
-                            type="button"
-                            disabled={!user?.id || actionState.verify === user.id || user?.verified}
-                            onClick={() => markVerified(user.id)}
-                          >
-                            {actionState.verify === user?.id ? '...' : 'verify'}
-                          </button>
-                          <button
-                            type="button"
-                            className="secondary"
-                            disabled={!user?.id || actionState.issue === user.id}
-                            onClick={() => issueCredential(user.id)}
-                          >
-                            {actionState.issue === user?.id ? '...' : 'issue VC'}
-                          </button>
-                          <button
-                            type="button"
-                            className="secondary"
-                            disabled={!hash || actionState.check === (hash?.startsWith('0x') ? hash.slice(2) : hash)}
-                            onClick={() => checkHash(hash)}
-                          >
-                            {actionState.check === (hash?.startsWith('0x') ? hash.slice(2) : hash)
-                              ? '...'
-                              : 'check hash'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td>
+                          {event.audioUrl ? <audio controls src={event.audioUrl} preload="none" /> : <span className="muted">none</span>}
+                        </td>
+                        <td>
+                          {event.latestCredential ? (
+                            <div className="table-meta">
+                              <div className="hash-display"><strong>hash</strong> {event.latestCredential.hash?.slice(0, 16)}...</div>
+                              {event.latestCredential.transactionHash ? (
+                                <div className="hash-display"><strong>tx</strong> {event.latestCredential.transactionHash.slice(0, 16)}...</div>
+                              ) : null}
+                              <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+                                {renderHashStatus(hash)}
+                                <button type="button" className="text-button" onClick={() => toggleExpanded(event.id)}>
+                                  {expandedRows.has(event.id) ? 'hide JSON' : 'view VC'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : <span className="muted">not issued</span>}
+                          {expandedRows.has(event.id) && event.latestCredential?.verifiableCredential && (
+                            <pre className="vc-preview">{JSON.stringify(event.latestCredential.verifiableCredential, null, 2)}</pre>
+                          )}
+                        </td>
+                        <td>
+                          <div className="action-group">
+                            <button
+                              type="button"
+                              disabled={!user?.id || actionState.verify === user.id || user?.verified}
+                              onClick={() => markVerified(user.id)}
+                            >
+                              {actionState.verify === user?.id ? '...' : 'verify'}
+                            </button>
+                            <button type="button" className="secondary" disabled={!user?.id || actionState.issue === user.id} onClick={() => issueCredential(user.id)}>
+                              {actionState.issue === user?.id ? '...' : 'issue VC'}
+                            </button>
+                            <button type="button" className="secondary" disabled={!hash} onClick={() => checkHash(hash)}>
+                              check hash
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.8rem', fontSize: '0.75rem' }}>
+              <span className="muted">Page {page} of {pages}</span>
+              <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="secondary">Prev</button>
+                <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="secondary">Next</button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -318,12 +276,7 @@ const DashboardPage = () => {
         </div>
         {trainingOpen && (
           <div style={{ marginTop: '0.8rem', width: '100%', height: '520px', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-            <iframe
-              title="Police Training Module"
-              src="/training-game/index.html"
-              allow="autoplay; fullscreen"
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            <iframe title="Police Training Module" src="/training-game/index.html" allow="autoplay; fullscreen" style={{ width: '100%', height: '100%', border: 'none' }} />
           </div>
         )}
       </div>

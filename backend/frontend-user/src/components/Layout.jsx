@@ -23,6 +23,8 @@ const Layout = () => {
               <span className="nav-user">{user?.name || user?.email}</span>
               <NavLink to="/dashboard">Dashboard</NavLink>
               <NavLink to="/upload">Upload ID</NavLink>
+              <NavLink to="/history">SOS history</NavLink>
+              <NavLink to="/settings">Settings</NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Logout
               </button>

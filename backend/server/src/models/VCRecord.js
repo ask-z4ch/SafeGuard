@@ -22,7 +22,10 @@ const vcRecordSchema = new mongoose.Schema(
     verifiableCredential: {
       type: mongoose.Schema.Types.Mixed,
       required: true
-    }
+    },
+    revoked: { type: Boolean, default: false },
+    revokedAt: Date,
+    revokeTransactionHash: String,
   },
   { timestamps: true }
 );

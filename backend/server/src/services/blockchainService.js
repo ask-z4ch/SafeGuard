@@ -60,6 +60,22 @@ export const anchorCredentialHash = async (hash) => {
   };
 };
 
+export const revokeCredentialHash = async (hash) => {
+  const normalized = ethers.hexlify(ethers.getBytes(hash.startsWith('0x') ? hash : `0x${hash}`));
+  const c = getContract();
+  const tx = await c.revoke(normalized);
+  const receipt = await tx.wait();
+  return {
+    hash: normalized,
+    revoked: true,
+    transactionHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    contractAddress: c.target,
+    network: process.env.ANCHOR_NETWORK || 'localhost',
+    revokedAt: new Date().toISOString(),
+  };
+};
+
 export const checkCredentialHash = async (hash) => {
   const normalized = ethers.hexlify(ethers.getBytes(hash.startsWith('0x') ? hash : `0x${hash}`));
   const c = getContract();

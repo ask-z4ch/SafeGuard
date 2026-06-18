@@ -151,12 +151,32 @@ const DashboardPage = () => {
                 <ul>
                   {credentials.map((vc) => (
                     <li key={vc.id || vc._id}>
-                      <span>Credential</span>
-                      {vc.transactionHash ? (
-                        <small style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-                          tx: {vc.transactionHash.slice(0, 14)}...
-                        </small>
-                      ) : null}
+                      <div>
+                        <span>Credential</span>
+                        {vc.transactionHash ? (
+                          <><br /><small style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                            tx: {vc.transactionHash.slice(0, 14)}...
+                          </small></>
+                        ) : null}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.3rem' }}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}
+                          onClick={() => {
+                            const blob = new Blob([JSON.stringify(vc.verifiableCredential, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `vc-${vc.hash?.slice(0, 8) || 'credential'}.json`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                        >
+                          download
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

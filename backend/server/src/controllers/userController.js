@@ -1,55 +1,10 @@
+import bcrypt from 'bcryptjs';
+
 import User from '../models/User.js';
 import VCRecord from '../models/VCRecord.js';
 import { saveEncryptedFile } from '../services/fileService.js';
 
 const allowedIdTypes = ['aadhar', 'passport'];
-
-export const uploadIdDocument = async (req, res, next) => {
-  try {
-    const { idType } = req.body;
-
-    if (!allowedIdTypes.includes(idType)) {
-      return res.status(400).json({ message: 'idType must be either aadhar or passport' });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: 'ID document file is required' });
-    }
-
-    const metadata = await saveEncryptedFile({
-      buffer: req.file.buffer,
-      originalName: req.file.originalname,
-      mimeType: req.file.mimetype
-    });
-
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const document = {
-      idType,
-      fileName: metadata.fileName,
-      originalName: metadata.originalName,
-      mimeType: metadata.mimeType,
-      size: metadata.size,
-      iv: metadata.iv,
-      authTag: metadata.authTag
-    };
-
-    user.idDocuments.push(document);
-    await user.save();
-
-    const savedDocument = user.idDocuments[user.idDocuments.length - 1];
-
-    res.status(201).json({
-      message: 'ID document uploaded successfully',
-      documentId: savedDocument.id
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const getProfile = async (req, res, next) => {
   try {
@@ -72,7 +27,7 @@ export const getProfile = async (req, res, next) => {
       originalName: doc.originalName,
       uploadedAt: doc.uploadedAt,
       status: user.verified ? 'verified' : 'pending',
-      url: `${host}/api/admin/id-documents/${user.id}/${doc.id}`
+      url: `${host}/api/admin/id-documents/${user.id}/${doc.id}`,
     }));
 
     res.json({
@@ -82,17 +37,92 @@ export const getProfile = async (req, res, next) => {
         email: user.email,
         verified: user.verified,
         role: user.role,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       },
       documents,
       credentials: credentials.map((vc) => ({
-        id: vc._id ? vc._id.toString() : undefined,
+        id: vc._id?.toString(),
         hash: vc.hash,
         transactionHash: vc.transactionHash,
         issuerDid: vc.issuerDid,
         createdAt: vc.createdAt,
-        verifiableCredential: vc.verifiableCredential
-      }))
+        verifiableCredential: vc.verifiableCredential,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadIdDocument = async (req, res, next) => {
+  try {
+    const { idType } = req.validated;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'ID document file is required' });
+    }
+
+    const metadata = await saveEncryptedFile({
+      buffer: req.file.buffer,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+    });
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const document = {
+      idType,
+      fileName: metadata.fileName,
+      originalName: metadata.originalName,
+      mimeType: metadata.mimeType,
+      size: metadata.size,
+      iv: metadata.iv,
+      authTag: metadata.authTag,
+    };
+
+    user.idDocuments.push(document);
+    await user.save();
+
+    const savedDocument = user.idDocuments[user.idDocuments.length - 1];
+
+    res.status(201).json({
+      message: 'ID document uploaded successfully',
+      documentId: savedDocument.id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { name, currentPassword, newPassword } = req.validated || req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (name) {
+      user.name = name;
+    }
+
+    if (currentPassword && newPassword) {
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated',
+      user: { id: user.id, name: user.name, email: user.email, verified: user.verified },
     });
   } catch (error) {
     next(error);

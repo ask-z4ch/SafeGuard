@@ -1,26 +1,37 @@
 import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import sosRoutes from './routes/sosRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
+  : ['http://localhost:3000', 'http://localhost:3001', 'https://safeguard-plum.vercel.app', 'https://safeguardadmin.vercel.app'];
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
-});
+app.use(cors({ origin: corsOrigins, credentials: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api', sosRoutes);
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/user', apiLimiter, userRoutes);
+app.use('/api/admin', apiLimiter, adminRoutes);
+app.use('/api', apiLimiter, sosRoutes);
+app.use('/api', publicRoutes);
 
 app.use(errorHandler);
 
